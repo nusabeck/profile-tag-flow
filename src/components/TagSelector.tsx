@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,22 +6,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Tag as TagType } from "@/data/mockData";
+import { ProfileGroup } from "@/data/mockData";
 import Tag from "./Tag";
 import { Input } from "@/components/ui/input";
 
 interface TagSelectorProps {
-  allTags: TagType[];
+  allTags: ProfileGroup[];
   selectedTagIds: string[];
   onChange: (tagIds: string[]) => void;
   onCreateTag: (name: string) => void;
+  trigger?: React.ReactNode;
 }
 
 const TagSelector = ({ 
   allTags, 
   selectedTagIds, 
   onChange, 
-  onCreateTag 
+  onCreateTag,
+  trigger
 }: TagSelectorProps) => {
   const [newTagName, setNewTagName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,27 +57,29 @@ const TagSelector = ({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 border-dashed"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Add Tags
-        </Button>
+        {trigger || (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 border-dashed"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Add to Profilegroup
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start">
         <div className="p-4 border-b">
-          <h3 className="font-medium mb-2">Manage Tags</h3>
+          <h3 className="font-medium mb-2">Manage Profile Groups</h3>
           <Input
-            placeholder="Search tags..."
+            placeholder="Search profile groups..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="mb-2"
           />
           <div className="flex items-center space-x-2">
             <Input
-              placeholder="Create new tag..."
+              placeholder="Create new profile group..."
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -109,7 +112,7 @@ const TagSelector = ({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No tags found
+              No profile groups found
             </p>
           )}
         </div>
