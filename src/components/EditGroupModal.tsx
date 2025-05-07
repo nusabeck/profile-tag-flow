@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Profile, ProfileGroup, SocialNetwork, UseCase } from "@/data/mockData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Table, TableHead, TableCell, TableRow } from "@/components/ui/table";
 
 interface EditGroupModalProps {
   isOpen: boolean;
@@ -101,6 +103,10 @@ const EditGroupModal = ({
     profile.network.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getSocialIcon = (network: SocialNetwork) => {
+    return networkIcons[network] || null;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -167,25 +173,54 @@ const EditGroupModal = ({
               </div>
               <ScrollArea className="h-[300px] rounded-md border p-4 mt-1.5">
                 <div className="space-y-2">
+                  <Table>
+                    <TableHead>Profile</TableHead>
+                    <TableHead>Network</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </Table>
                   {filteredProfiles.map((profile) => (
-                    <div
-                      key={profile.id}
-                      className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer"
-                      onClick={() => toggleProfile(profile.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {networkIcons[profile.network]}
-                        <div>
-                          <div className="font-medium">{profile.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {profile.network.charAt(0).toUpperCase() + profile.network.slice(1)}
-                          </div>
+                    <TableRow key={profile.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={profile.avatar} alt={profile.name} />
+                            <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{profile.name}</span>
                         </div>
-                      </div>
-                      {selectedProfiles.includes(profile.id) && (
-                        <Badge variant="secondary">Selected</Badge>
-                      )}
-                    </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getSocialIcon(profile.network)}
+                          <span className="capitalize">{profile.network}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          profile.type === 'private'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {profile.type === 'private' ? '🔒 Private' : '🌐 Public'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {selectedProfiles.includes(profile.id) && (
+                            <Badge variant="secondary">Selected</Badge>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleProfile(profile.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </div>
               </ScrollArea>

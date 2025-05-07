@@ -10,13 +10,13 @@ import {
 import {
   Checkbox
 } from "@/components/ui/checkbox";
-import { Profile, ProfileGroup, SocialNetwork } from "@/data/mockData";
+import { Profile, ProfileGroup, SocialNetwork, UseCase } from "@/data/mockData";
 import Tag from "./Tag";
 import TagSelector from "./TagSelector";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus } from "lucide-react";
+import { Plus, X, Lock, Globe } from "lucide-react";
 
 interface ProfileTableProps {
   profiles: Profile[];
@@ -24,6 +24,7 @@ interface ProfileTableProps {
   onTagsChange: (profileId: string, tagIds: string[]) => void;
   onCreateTagFromSelector: (name: string) => void;
   onAddToGroup: (profileId: string, tagIds: string[]) => void;
+  onRemoveUseCase: (profileId: string, useCase: UseCase) => void;
 }
 
 const getSocialIcon = (network: SocialNetwork) => {
@@ -91,7 +92,14 @@ const formatFollowers = (count: number): string => {
   return count.toString();
 };
 
-const ProfileTable = ({ profiles, tags, onTagsChange, onCreateTagFromSelector, onAddToGroup }: ProfileTableProps) => {
+const ProfileTable = ({
+  profiles,
+  tags,
+  onTagsChange,
+  onCreateTagFromSelector,
+  onAddToGroup,
+  onRemoveUseCase,
+}: ProfileTableProps) => {
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -130,6 +138,33 @@ const ProfileTable = ({ profiles, tags, onTagsChange, onCreateTagFromSelector, o
     });
 
     toast.success(`Updated tags for ${selectedProfiles.length} profiles`);
+  };
+
+  const handleRemoveTag = (profileId: string, tagId: string) => {
+    const profile = profiles.find(p => p.id === profileId);
+    if (profile) {
+      const newTags = profile.tags.filter(id => id !== tagId);
+      onTagsChange(profileId, newTags);
+    }
+  };
+
+  const handleRemoveUseCase = (profileId: string, useCase: UseCase) => {
+    const profile = profiles.find(p => p.id === profileId);
+    if (profile) {
+      // Find all tags that have this use case
+      const tagsWithUseCase = tags.filter(tag => 
+        profile.tags.includes(tag.id) && tag.useCases.includes(useCase)
+      );
+      
+      // Remove the use case from all these tags
+      const updatedTags = tagsWithUseCase.map(tag => ({
+        ...tag,
+        useCases: tag.useCases.filter(uc => uc !== useCase)
+      }));
+
+      // Update the profile's tags
+      onTagsChange(profileId, profile.tags);
+    }
   };
 
   return (
@@ -171,107 +206,147 @@ const ProfileTable = ({ profiles, tags, onTagsChange, onCreateTagFromSelector, o
           </div>
         </div>
       )}
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedProfiles.length === profiles.length}
-                onCheckedChange={toggleSelectAll}
-                aria-label="Select all"
-              />
-            </TableHead>
-            <TableHead className="font-semibold">Profile</TableHead>
-            <TableHead className="font-semibold">Network</TableHead>
-            <TableHead className="font-semibold">Profile Groups</TableHead>
-            <TableHead className="font-semibold">Use Cases</TableHead>
-            <TableHead className="w-[100px] font-semibold">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {profiles.map((profile) => (
-            <TableRow 
-              key={profile.id}
-              className="group hover:bg-muted/50 transition-colors"
-            >
-              <TableCell>
+      <div className="mt-4">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={selectedProfiles.includes(profile.id)}
-                  onCheckedChange={() => toggleProfileSelection(profile.id)}
-                  aria-label={`Select ${profile.name}`}
+                  checked={selectedProfiles.length === profiles.length}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all"
                 />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile.avatar} alt={profile.name} />
-                    <AvatarFallback className="text-sm">{profile.name.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{profile.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {getSocialIcon(profile.network)}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {profile.tags.map((tagId) => {
-                    const tag = tags.find((t) => t.id === tagId);
-                    return tag ? (
-                      <span
-                        key={tag.id}
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${tag.color} text-white shadow-sm`}
-                      >
-                        {tag.name}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from(new Set(
-                    profile.tags.flatMap(tagId => {
-                      const tag = tags.find((t) => t.id === tagId);
-                      return tag ? tag.useCases : [];
-                    })
-                  )).map((useCase) => (
-                    <span
-                      key={useCase}
-                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        useCase === 'analyze' ? 'bg-blue-100 text-blue-800' :
-                        useCase === 'orchestrate' ? 'bg-purple-100 text-purple-800' :
-                        'bg-green-100 text-green-800'
-                      } shadow-sm`}
-                    >
-                      {useCase === 'analyze' ? '📊 Analyze' :
-                       useCase === 'orchestrate' ? '🎯 Orchestrate' :
-                       '💬 Engage'}
-                    </span>
-                  ))}
-                </div>
-              </TableCell>
-              <TableCell>
-                <TagSelector
-                  allTags={tags}
-                  selectedTagIds={profile.tags}
-                  onChange={(tagIds) => onAddToGroup(profile.id, tagIds)}
-                  onCreateTag={onCreateTagFromSelector}
-                  trigger={
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Add to Profilegroup
-                    </Button>
-                  }
-                />
-              </TableCell>
+              </TableHead>
+              <TableHead className="font-semibold">Profile</TableHead>
+              <TableHead className="font-semibold">Network</TableHead>
+              <TableHead className="font-semibold w-[120px]">Type</TableHead>
+              <TableHead className="font-semibold">Profile Groups</TableHead>
+              <TableHead className="font-semibold">Use Cases</TableHead>
+              <TableHead className="w-[100px] font-semibold">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {profiles.map((profile) => (
+              <TableRow 
+                key={profile.id}
+                className="group hover:bg-muted/50 transition-colors"
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={selectedProfiles.includes(profile.id)}
+                    onCheckedChange={() => toggleProfileSelection(profile.id)}
+                    aria-label={`Select ${profile.name}`}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile.avatar} alt={profile.name} />
+                      <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{profile.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getSocialIcon(profile.network)}
+                    <span className="capitalize">{profile.network}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="w-[120px]">
+                  <button className={`px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                    profile.type === 'private'
+                      ? 'bg-secondary hover:bg-secondary/80'
+                      : 'bg-secondary hover:bg-secondary/80'
+                  }`}>
+                    {profile.type === 'private' ? '🔒 Private' : '🌐 Public'}
+                  </button>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {profile.tags.map((tagId) => {
+                      const tag = tags.find(t => t.id === tagId);
+                      if (!tag) return null;
+                      return (
+                        <span
+                          key={tag.id}
+                          className={`inline-flex items-center gap-1 px-2 py-1 font-medium rounded-full cursor-pointer text-xs ${
+                            tag.color === 'bg-purple-500' ? 'bg-purple-100 text-purple-800' :
+                            tag.color === 'bg-blue-500' ? 'bg-blue-100 text-blue-800' :
+                            tag.color === 'bg-green-500' ? 'bg-green-100 text-green-800' :
+                            tag.color === 'bg-yellow-500' ? 'bg-yellow-100 text-yellow-800' :
+                            tag.color === 'bg-red-500' ? 'bg-red-100 text-red-800' :
+                            tag.color === 'bg-indigo-500' ? 'bg-indigo-100 text-indigo-800' :
+                            tag.color === 'bg-pink-500' ? 'bg-pink-100 text-pink-800' :
+                            tag.color === 'bg-orange-500' ? 'bg-orange-100 text-orange-800' :
+                            tag.color === 'bg-teal-500' ? 'bg-teal-100 text-teal-800' :
+                            tag.color === 'bg-cyan-500' ? 'bg-cyan-100 text-cyan-800' :
+                            tag.color === 'bg-emerald-500' ? 'bg-emerald-100 text-emerald-800' :
+                            tag.color === 'bg-violet-500' ? 'bg-violet-100 text-violet-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {tag.name}
+                          <button
+                            onClick={() => handleRemoveTag(profile.id, tag.id)}
+                            className="ml-1 hover:text-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from(new Set(profile.tags.flatMap(tagId => {
+                      const tag = tags.find(t => t.id === tagId);
+                      return tag?.useCases || [];
+                    }))).map((useCase) => (
+                      <span
+                        key={useCase}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          useCase === 'analyze' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : useCase === 'orchestrate'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {useCase === 'analyze' ? '📊' : useCase === 'orchestrate' ? '🎯' : '💬'} {useCase}
+                        <button
+                          onClick={() => onRemoveUseCase(profile.id, useCase)}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <TagSelector
+                    allTags={tags}
+                    selectedTagIds={profile.tags}
+                    onChange={(tagIds) => onAddToGroup(profile.id, tagIds)}
+                    onCreateTag={onCreateTagFromSelector}
+                    trigger={
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Add to Group
+                      </Button>
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { profiles as initialProfiles, defaultTags as initialTags, ProfileGroup, Profile, SocialNetwork, UseCase } from "@/data/mockData";
+import { profiles as initialProfiles, mockTags as initialTags, ProfileGroup, Profile, SocialNetwork, UseCase, ProfileType } from "@/data/mockData";
 import ProfileTable from "@/components/ProfileTable";
 import Header from "@/components/Header";
 import CreateTagModal from "@/components/CreateTagModal";
@@ -15,26 +15,30 @@ const Index = () => {
   const [selectedGroup, setSelectedGroup] = useState<ProfileGroup | null>(null);
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [activeNetworkFilter, setActiveNetworkFilter] = useState<SocialNetwork | null>(null);
-  const [activeUseCaseFilter, setActiveUseCaseFilter] = useState<UseCase | null>(null);
+  const [activeTypeFilter, setActiveTypeFilter] = useState<ProfileType | null>(null);
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const { toast } = useToast();
 
   const filteredProfiles = useMemo(() => {
     return profiles.filter((profile) => {
+      // Filter by tag
       const matchesTag = activeTagFilter
         ? profile.tags.includes(activeTagFilter)
         : true;
+
+      // Filter by network
       const matchesNetwork = activeNetworkFilter
         ? profile.network === activeNetworkFilter
         : true;
-      const matchesUseCase = activeUseCaseFilter
-        ? profile.tags.some(tagId => {
-            const tag = tags.find(t => t.id === tagId);
-            return tag?.useCases.includes(activeUseCaseFilter);
-          })
+
+      // Filter by profile type
+      const matchesType = activeTypeFilter
+        ? profile.type === activeTypeFilter
         : true;
-      return matchesTag && matchesNetwork && matchesUseCase;
+
+      return matchesTag && matchesNetwork && matchesType;
     });
-  }, [profiles, activeTagFilter, activeNetworkFilter, activeUseCaseFilter, tags]);
+  }, [profiles, activeTagFilter, activeNetworkFilter, activeTypeFilter, tags]);
 
   const handleTagsChange = (profileId: string, tagIds: string[]) => {
     setProfiles((prevProfiles) =>
@@ -62,7 +66,7 @@ const Index = () => {
       id: `tag-${tags.length + 1}`,
       name,
       color: "bg-purple-500",
-      useCases: ['analyze', 'orchestrate', 'engage'] as UseCase[],
+      useCases: ['analyze'] as UseCase[],
     };
     
     setTags((prevTags) => [...prevTags, newTag]);
@@ -95,15 +99,31 @@ const Index = () => {
     setActiveNetworkFilter(activeNetworkFilter === network ? null : network);
   };
 
-  const handleFilterByUseCase = (useCase: UseCase | null) => {
-    setActiveUseCaseFilter(activeUseCaseFilter === useCase ? null : useCase);
+  const handleFilterByType = (type: ProfileType | null) => {
+    setActiveTypeFilter(activeTypeFilter === type ? null : type);
+  };
+
+  const handleRemoveUseCase = (profileId: string, useCase: UseCase) => {
+    setProfiles((prevProfiles) =>
+      prevProfiles.map((profile) => {
+        if (profile.id === profileId) {
+          // Remove the use case from all tags that have it
+          const updatedTags = profile.tags.filter((tagId) => {
+            const tag = tags.find((t) => t.id === tagId);
+            return tag && !tag.useCases.includes(useCase);
+          });
+          return { ...profile, tags: updatedTags };
+        }
+        return profile;
+      })
+    );
   };
 
   return (
-    <div className="container py-8">
+    <div className="container mx-auto py-8 space-y-8">
       <Header
-        title="Social Profiles"
-        subtitle="Manage and organize your connected social media profiles"
+        title="Profile Management"
+        subtitle="Manage your social media profiles and groups"
         selectedTags={tags}
         onFilterByTag={handleFilterByTag}
         activeTagFilter={activeTagFilter}
@@ -111,22 +131,25 @@ const Index = () => {
         onFilterByNetwork={handleFilterByNetwork}
         activeNetworkFilter={activeNetworkFilter}
         onEditGroup={handleEditGroup}
-        onFilterByUseCase={handleFilterByUseCase}
-        activeUseCaseFilter={activeUseCaseFilter}
+        onFilterByType={handleFilterByType}
+        activeTypeFilter={activeTypeFilter}
       />
-
-      <ProfileTable 
-        profiles={filteredProfiles}
-        tags={tags}
-        onTagsChange={handleTagsChange}
-        onCreateTagFromSelector={handleCreateTagFromSelector}
-        onAddToGroup={handleTagsChange}
-      />
+      <div className="mt-8">
+        <ProfileTable 
+          profiles={filteredProfiles}
+          tags={tags}
+          onTagsChange={handleTagsChange}
+          onCreateTagFromSelector={handleCreateTagFromSelector}
+          onAddToGroup={handleTagsChange}
+          onRemoveUseCase={handleRemoveUseCase}
+        />
+      </div>
 
       <CreateTagModal
         isOpen={isCreateTagModalOpen}
         onClose={() => setIsCreateTagModalOpen(false)}
         onCreateTag={handleCreateTag}
+        profiles={profiles}
       />
 
       {selectedGroup && (
